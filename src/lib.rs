@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::Write;
-mod shellcode;
+pub mod shellcode;
 
     pub fn gen_shellcode (args: Vec<String>) {   // create shellcode and output to file
 
