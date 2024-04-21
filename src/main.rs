@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::Write;
-mod shellcode;
+pub mod shellcode;
 
 fn main() {
 
